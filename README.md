@@ -21,9 +21,9 @@ Rust and tauri are very fast, and lightweight and most importantly cross-platfor
 
 1. I know it
 2. I will be able to use external libraries to make the app more interactive
-   A. Chakra UI (To make UI Development fast, the scope of this project is not to create frontend from scratch, hence I used a UI component library)
-   B. Zustand - Fast global state management library
-   C. Vitest for testing frontend.
+   i. Chakra UI (To make UI Development fast, the scope of this project is not to create frontend from scratch, hence I used a UI component library)
+   ii. Zustand - Fast global state management library
+   iii. Vitest for testing frontend.
 
 ## Proposed Backend
 
