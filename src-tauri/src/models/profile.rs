@@ -1,4 +1,4 @@
-use crate::briefcase::BriefCase;
+use crate::models::brief_case::BriefCase;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use uuid::Uuid;

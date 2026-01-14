@@ -1,6 +1,6 @@
-use crate::briefcase::BriefCase;
-use crate::profile::Profile;
-use crate::task::Task;
+use crate::models::brief_case::BriefCase;
+use crate::models::profile::Profile;
+use crate::models::task::Task;
 
 pub struct State {
     profiles: Vec<Profile>,
