@@ -14,15 +14,34 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
 
+    # This tells GitHub to run all 'run' commands inside the src-tauri folder
+    defaults:
+      run:
+        working-directory: src-tauri
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # IMPORTANT: Tauri needs these Linux libraries to compile
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          # We must tell the cacher where the lockfile is
+          workspaces: src-tauri -> target
 
       - name: Run tests
         run: cargo test --verbose
