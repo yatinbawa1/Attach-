@@ -1,20 +1,13 @@
 mod config;
-mod file_errors;
-
 use crate::models::brief_case::BriefCase;
 use crate::models::profile::Profile;
 use crate::storage::config::ConfigFile;
-use crate::storage::file_errors::ReadError;
-use crate::storage::file_errors::WriteError;
-use std::io::Stderr;
+use crate::ProjectErrors::project_errors::{ReadError, WriteError};
 
-use directories::ProjectDirs;
+use crate::models::AppItem;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use serde_json::Error;
-use std::path::{Path, PathBuf};
-use thiserror;
-use thiserror::Error;
+use std::path::Path;
 use tokio::fs;
 
 #[derive(Debug, Clone)]
@@ -36,27 +29,26 @@ impl Storage {
         Ok(serde_json::from_str(&data)?)
     }
 
-    async fn write_vec_to_json<T: Serialize, P: AsRef<Path>>(
-        path: &P,
-        values: &Vec<T>,
-    ) -> Result<(), WriteError> {
+    pub async fn write_to_disk<T: AppItem>(&self,values: &Vec<T>) -> Result<(), WriteError> {
         let data = serde_json::to_string(&values)?;
-        fs::write(path, data).await?;
+        if !values.is_empty() {
+            if(values[0].item_type() == "profile") {
+                fs::write(&self.config_file.profile_path, data).await?;
+            }else if values[0].item_type() == "briefcase" {
+                fs::write(&self.config_file.brief_case_path, data).await?;
+            }else {
+                panic!("invalid item , can only write profile and briefcase");
+            }
+        }
+       
         Ok(())
     }
+
     pub async fn read_profiles_from_disk(&mut self) -> Result<Vec<Profile>, ReadError> {
-            Ok(Self::read_vec_from_json(&self.config_file.profile_path).await?)
+        Ok(Self::read_vec_from_json(&self.config_file.profile_path).await?)
     }
 
     pub async fn read_brief_cases_from_disk(&mut self) -> Result<Vec<BriefCase>, ReadError> {
         Ok(Self::read_vec_from_json(&self.config_file.brief_case_path).await?)
-    }
-
-    pub async fn write_brief_cases_to_disk(&self, cases: &Vec<BriefCase>) -> Result<(), WriteError> {
-        Ok(Self::write_vec_to_json(&self.config_file.brief_case_path, &cases).await?)
-    }
-
-    pub async fn write_profiles_to_disk(&self, profiles: &Vec<Profile>) -> Result<(), WriteError> {
-        Ok(Self::write_vec_to_json(&self.config_file.profile_path, profiles).await?)
     }
 }

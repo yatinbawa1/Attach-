@@ -1,4 +1,4 @@
-use crate::storage::file_errors::ReadError;
+use crate::ProjectErrors::project_errors::{ReadError, WriteError};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
