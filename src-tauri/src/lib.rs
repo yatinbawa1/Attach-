@@ -5,6 +5,7 @@
 mod models;
 
 mod state;
+mod storage;
 mod tests;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
