@@ -8,7 +8,7 @@ use tauri::Manager;
 
 mod models;
 
-mod ProjectErrors;
+mod project_errors;
 mod state;
 mod storage;
 mod tests;

@@ -2,6 +2,7 @@ mod storage_test {
     use crate::models::profile::Profile;
     use crate::storage::*;
     use std::path::PathBuf;
+    use crate::models::brief_case::BriefCase;
 
     #[cfg(test)]
     #[tokio::test]
@@ -16,21 +17,21 @@ mod storage_test {
 
     #[tokio::test]
     async fn test_load_brief_case_empty() {
-        let mut storage: Storage = Storage::new().await.unwrap();
-        let cases = storage.read_brief_cases_from_disk().await.unwrap();
+        let storage: Storage = Storage::new().await.unwrap();
+        let cases: Vec<Profile> = storage.read_from_disk().await.unwrap();
         println!("{:?}", cases);
     }
 
     #[tokio::test]
     async fn test_load_profile_empty() {
-        let mut storage: Storage = Storage::new().await.unwrap();
-        let profiles = storage.read_profiles_from_disk().await.unwrap();
+        let storage: Storage = Storage::new().await.unwrap();
+        let profiles: Vec<BriefCase> = storage.read_from_disk().await.unwrap();
         println!("{:?}", profiles);
     }
 
     #[tokio::test]
     async fn test_write() {
-        let mut storage: Storage = Storage::new().await.unwrap();
+        let storage: Storage = Storage::new().await.unwrap();
         let mut profile_array: Vec<Profile> = Vec::new();
 
         for i in 0..10 {
@@ -41,6 +42,6 @@ mod storage_test {
         }
 
         storage.write_to_disk(&profile_array).await.unwrap();
-        let profiles = storage.read_profiles_from_disk().await.unwrap();
+        let profiles: Vec<Profile> = storage.read_from_disk().await.unwrap();
     }
 }

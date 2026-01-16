@@ -8,16 +8,16 @@ use crate::models::profile::Profile;
 pub trait AppItem:
     serde::Serialize + serde::de::DeserializeOwned + Clone + Send + Sync + 'static
 {
-    fn item_type(&self) -> &'static str;
+    fn item_type() -> &'static str;
 }
 
 impl AppItem for Profile {
-    fn item_type(&self) -> &'static str {
+    fn item_type() -> &'static str {
         "profile"
     }
 }
 impl AppItem for BriefCase {
-    fn item_type(&self) -> &'static str {
+    fn item_type() -> &'static str {
         "briefcase"
     }
 }

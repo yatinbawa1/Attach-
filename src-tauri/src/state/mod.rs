@@ -3,7 +3,7 @@ use crate::models::profile::Profile;
 use crate::models::task::Task;
 use crate::models::AppItem;
 use crate::storage::Storage;
-use crate::ProjectErrors::project_errors::ReadError;
+use crate::project_errors::ReadError;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::RwLock;
 
@@ -15,10 +15,10 @@ pub struct State {
 }
 
 impl State {
-    pub async fn new(mut storage: Storage) -> Result<Self, ReadError> {
+    pub async fn new(storage: Storage) -> Result<Self, ReadError> {
         Ok(Self {
-            profiles: RwLock::from(storage.read_profiles_from_disk().await?),
-            brief_cases: RwLock::from(storage.read_brief_cases_from_disk().await?),
+            profiles: RwLock::from(storage.read_from_disk().await?),
+            brief_cases: RwLock::from(storage.read_from_disk().await?),
             tasks: Vec::new(),
             storage: storage,
         })
