@@ -14,22 +14,20 @@ mod storage_test {
             storage.config_file.profile_path,
             PathBuf::from("/Users/yatin/Library/Application Support/attache/profile.json")
         );
-        assert_eq!(storage.current_profiles, None);
-        assert_eq!(storage.current_brief_cases, None);
     }
 
     #[tokio::test]
     async fn test_load_brief_case_empty() {
         let mut storage: Storage = Storage::new().await.unwrap();
-        storage.read_brief_cases_from_disk().await.unwrap();
-        println!("{:?}", storage.current_brief_cases);
+        let cases = storage.read_brief_cases_from_disk().await.unwrap();
+        println!("{:?}", cases);
     }
 
     #[tokio::test]
     async fn test_load_profile_empty() {
         let mut storage: Storage = Storage::new().await.unwrap();
-        storage.read_profiles_from_disk_into_current().await.unwrap();
-        println!("{:?}", storage.current_profiles);
+        let profiles =  storage.read_profiles_from_disk().await.unwrap();
+        println!("{:?}", profiles);
     }
 
     #[tokio::test]
@@ -42,7 +40,6 @@ mod storage_test {
 	    }
 
         storage.write_profiles_to_disk(&profile_array).await.unwrap();
-	    let new_storage = storage.read_profiles_from_disk_into_current().await.unwrap();
-
+	    let profiles = storage.read_profiles_from_disk().await.unwrap();
     }
 }

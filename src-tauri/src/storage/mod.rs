@@ -20,19 +20,15 @@ use tokio::fs;
 #[derive(Debug, Clone)]
 pub struct Storage {
     pub config_file: ConfigFile,
-    pub current_profiles: Option<Vec<Profile>>,
-    pub current_brief_cases: Option<Vec<BriefCase>>,
 }
 
 impl Storage {
     pub async fn new() -> Result<Self, ReadError> {
         Ok(Self {
             config_file: ConfigFile::new().await?,
-            current_profiles: None,
-            current_brief_cases: None,
         })
     }
-    
+
     async fn read_vec_from_json<T: DeserializeOwned, P: AsRef<Path>>(
         path: &P,
     ) -> Result<Vec<T>, ReadError> {
@@ -48,16 +44,12 @@ impl Storage {
         fs::write(path, data).await?;
         Ok(())
     }
-    pub async fn read_profiles_from_disk_into_current(&mut self) -> Result<(), ReadError> {
-        self.current_profiles =
-            Some(Self::read_vec_from_json(&self.config_file.profile_path).await?);
-        Ok(())
+    pub async fn read_profiles_from_disk(&mut self) -> Result<Vec<Profile>, ReadError> {
+            Ok(Self::read_vec_from_json(&self.config_file.profile_path).await?)
     }
 
-    pub async fn read_brief_cases_from_disk(&mut self) -> Result<(), ReadError> {
-        self.current_brief_cases =
-            Some(Self::read_vec_from_json(&self.config_file.brief_case_path).await?);
-        Ok(())
+    pub async fn read_brief_cases_from_disk(&mut self) -> Result<Vec<BriefCase>, ReadError> {
+        Ok(Self::read_vec_from_json(&self.config_file.brief_case_path).await?)
     }
 
     pub async fn write_brief_cases_to_disk(&self, cases: &Vec<BriefCase>) -> Result<(), WriteError> {
