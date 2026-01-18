@@ -20,10 +20,12 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
-tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "process"] }
 serde_json = "1"
 uuid = { version = "1.6", features = ["v4", "serde"] }
-regex = "1.12.2"
 thiserror = "2.0.17"
-directories = "6.0.0"
+image = "0.24"
+base64 = "0.22"
+windows = { version = "0.52", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }

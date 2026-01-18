@@ -1,13 +1,14 @@
 use crate::models::brief_case::BriefCase;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tauri::{Manager, Runtime};
+use tokio::fs;
 use uuid::Uuid;
 
 #[derive(Deserialize, Serialize, Clone, Debug, Eq, PartialEq)]
 pub struct Profile {
     pub profile_id: Uuid,
     pub profile_name: String,
-    pub profile_path: PathBuf,
 }
 
 impl Profile {
@@ -19,11 +20,18 @@ impl Profile {
             .collect()
     }
 
-    pub fn new(profile_name: String, profile_path: PathBuf) -> Self {
-        Self {
-            profile_id: Uuid::new_v4(),
+    pub async fn new<R: Runtime, M: Manager<R>>(
+        profile_name: String,
+        manager: &M,
+    ) -> Result<Self, std::io::Error> {
+        let profile_id = Uuid::new_v4();
+        let base_dir = manager.path().app_data_dir();
+        let profile_path = base_dir.unwrap().join(format!("profiles/{}", profile_id));
+        fs::create_dir_all(&profile_path).await?;
+
+        Ok(Self {
+            profile_id,
             profile_name,
-            profile_path,
-        }
+        })
     }
 }

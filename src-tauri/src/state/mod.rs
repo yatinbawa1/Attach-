@@ -1,90 +1,65 @@
-use crate::models::brief_case::BriefCase;
-use crate::models::profile::Profile;
 use crate::models::task::Task;
-use crate::models::AppItem;
+use crate::models::{brief_case::BriefCase, profile::Profile};
+use crate::project_errors::{ReadError, WriteError};
 use crate::storage::Storage;
-use crate::project_errors::ReadError;
-use tauri::{AppHandle, Emitter};
+use crate::workspace::WorkspaceState;
+use tauri::{Manager, Runtime};
 use tokio::sync::RwLock;
 
-pub struct State {
-    profiles: RwLock<Vec<Profile>>,
-    brief_cases: RwLock<Vec<BriefCase>>,
-    tasks: Vec<Task>,
-    storage: Storage,
+pub struct AppState {
+    pub brief_cases: RwLock<Vec<BriefCase>>,
+    pub profiles: RwLock<Vec<Profile>>,
+    pub workspace_state: RwLock<Option<WorkspaceState>>,
 }
 
-impl State {
-    pub async fn new(storage: Storage) -> Result<Self, ReadError> {
+impl AppState {
+    pub async fn new<R: Runtime, M: Manager<R>>(manager: &M) -> Result<Self, ReadError> {
+        Storage::check_files(manager).await?;
         Ok(Self {
-            profiles: RwLock::from(storage.read_from_disk().await?),
-            brief_cases: RwLock::from(storage.read_from_disk().await?),
-            tasks: Vec::new(),
-            storage: storage,
+            brief_cases: Storage::read_from_disk(manager).await?.into(),
+            profiles: Storage::read_from_disk(manager).await?.into(),
+            workspace_state: None.into(),
         })
     }
-}
 
-// Helper to handle the "Update, Save, and Emit" logic
-async fn update_and_persist<T: AppItem>(
-    app: &AppHandle,
-    lock_root: &RwLock<Vec<T>>,
-    item: T,
-    storage: &Storage,
-    event_name: &str,
-) -> Result<(), String> {
-    // 1. Update memory
-    let current_list = {
-        let mut lock = lock_root.write().await;
-        lock.push(item);
-        lock.clone()
-    };
-
-    // 2. Persist to disk (Assuming storage has a generic method or handles T)
-    // Note: You might need to adjust your Storage method to be generic too!
-    match storage.write_to_disk(&current_list).await {
-        Ok(_) => {
-            app.emit(event_name, "success").map_err(|e| e.to_string())?;
-            Ok(())
-        }
-        Err(err) => {
-            let error_msg = format!("Error [Can Not Save] [{}]", err);
-            app.emit(event_name, &error_msg).ok();
-            Err(error_msg)
-        }
+    pub async fn add_brief_case(&self, brief_case: BriefCase) {
+        self.brief_cases.write().await.push(brief_case);
     }
-}
 
-#[tauri::command]
-pub async fn add_item_persist(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, State>,
-    item_type: String,          // "profile" or "briefcase"
-    payload: serde_json::Value, // Generic JSON from frontend
-) -> Result<(), String> {
-    match item_type.as_str() {
-        "profile" => {
-            let item: Profile = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            update_and_persist(
-                &app,
-                &state.profiles,
-                item,
-                &state.storage,
-                "profile-status",
-            )
-            .await
-        }
-        "briefcase" => {
-            let item: BriefCase = serde_json::from_value(payload).map_err(|e| e.to_string())?;
-            update_and_persist(
-                &app,
-                &state.brief_cases,
-                item,
-                &state.storage,
-                "briefcase-status",
-            )
-            .await
-        }
-        _ => Err("Unknown item type".to_string()),
+    pub async fn add_profile(&self, profile: Profile) {
+        self.profiles.write().await.push(profile);
+    }
+    pub async fn save_profiles<R: Runtime, M: Manager<R>>(
+        &self,
+        app_handle: &M,
+    ) -> Result<(), WriteError> {
+        Storage::write_to_disk(app_handle, &self.profiles.read().await.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn save_brief_cases<R: Runtime, M: Manager<R>>(
+        &self,
+        app_handle: &M,
+    ) -> Result<(), WriteError> {
+        println!("Brief cases: {:?}", self.brief_cases.read().await);
+        Storage::write_to_disk(app_handle, &self.brief_cases.read().await.clone()).await?;
+        Ok(())
+    }
+
+    pub async fn get_profiles(&self) -> Vec<Profile> {
+        self.profiles.read().await.clone()
+    }
+
+    pub async fn get_brief_cases(&self) -> Vec<BriefCase> {
+        self.brief_cases.read().await.clone()
+    }
+    pub async fn create_workspace<R: Runtime, M: Manager<R>>(
+        &self,
+        manager: &M,
+        tasks: Vec<Task>,
+    ) -> Result<(), String> {
+        let mut workspace = self.workspace_state.write().await;
+        *workspace = Some(WorkspaceState::new(tasks));
+        Ok(())
     }
 }
