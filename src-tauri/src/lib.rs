@@ -3,16 +3,10 @@
 #![allow(unused_imports)]
 
 use crate::commands::{
-    close_workspace, 
-    create_profile, 
-    create_brief_case,
-    load_profiles, 
-    load_briefcases,
-    save_profiles, 
-    save_briefcases,
-    save_all_data,
-    open_workspace, 
-    test_command
+    change_webview_url, close_workspace, create_brief_case, create_profile, execute_next_task,
+    get_panel_data, launch_panel_window, load_briefcases, load_profiles, next_task_execution,
+    prev_task_execution, save_all_data, save_briefcases, save_profiles, start_automation,
+    test_command, TaskExecutionResult,
 };
 
 use crate::state::AppState;
@@ -48,7 +42,13 @@ pub fn run() {
             save_profiles,
             save_briefcases,
             save_all_data,
-            open_workspace,
+            launch_panel_window,
+            get_panel_data,
+            start_automation,
+            next_task_execution,
+            prev_task_execution,
+            execute_next_task,
+            change_webview_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

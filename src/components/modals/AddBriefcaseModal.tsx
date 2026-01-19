@@ -40,7 +40,7 @@ export const AddBriefcaseModal = () => {
         <Dialog.Root open={isAddBriefcaseOpen} onOpenChange={(e) => setAddBriefcaseOpen(e.open)}>
             <Dialog.Backdrop/>
             <Dialog.Positioner>
-                <Dialog.Content bg="gray.900" color="white" border="1px solid" borderColor="whiteAlpha.200">
+                <Dialog.Content bg="gray.900" color="white" border="1px solid" borderColor="whiteAlpha.200" zIndex={1000}>
                     <Dialog.Header>
                         <Dialog.Title>Add Briefcase</Dialog.Title>
                         <Dialog.CloseTrigger/>
@@ -53,13 +53,17 @@ export const AddBriefcaseModal = () => {
                             </Text>
                             </Text>
 
-                            <SelectRoot collection={platformCollection} value={[selectedPlatform]}
-                                        onValueChange={(e) => setSelectedPlatform(e.value[0])}>
+                            <SelectRoot 
+                                collection={platformCollection} 
+                                value={[selectedPlatform]}
+                                onValueChange={(e) => setSelectedPlatform(e.value[0])}
+                                positioning={{ sameWidth: true }}
+                            >
                                 <SelectLabel color="gray.400">Platform</SelectLabel>
                                 <SelectTrigger>
                                     <SelectValueText placeholder="Select Platform"/>
                                 </SelectTrigger>
-                                <SelectContent bg="gray.800">
+                                <SelectContent bg="gray.800" zIndex={1500} portalled={true}>
                                     {platformCollection.items.map((item) => (
                                         <SelectItem item={item} key={item.value}>{item.label}</SelectItem>
                                     ))}

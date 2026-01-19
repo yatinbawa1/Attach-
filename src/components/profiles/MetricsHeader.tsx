@@ -1,11 +1,11 @@
 import {Flex, HStack, IconButton, Text} from '@chakra-ui/react';
 import {FaPlus} from 'react-icons/fa';
-import {useStore} from '../../store';
-import {SocialMedia} from '../../types';
-import {getPlatformConfig} from '../../utils/platformConfig'; // Extract the switch case to a util file
+import {useStore} from '@/store.ts';
+import {SocialMedia} from '@/types.ts';
+import {getPlatformConfig} from '@/utils/platformConfig.ts'; // Extract the switch case to a util file
 
 export const MetricsHeader = () => {
-    const {getBriefcaseCount, profiles, briefcases, setAddProfileOpen, setAddBriefcaseOpen, setError} = useStore();
+    const {getBriefcaseCount, profiles, briefcases, setAddProfileOpen, setAddBriefcaseOpen} = useStore();
 
     const handlePlatformCheck = (platform: SocialMedia) => {
         let targetProfileIndex = -1;

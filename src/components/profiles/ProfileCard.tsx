@@ -4,6 +4,7 @@ import {useStore} from '../../store';
 import {Profile,} from '../../types';
 import {BriefcaseItem} from './BriefcaseItem';
 
+
 export const ProfileCard = ({profile}: { profile: Profile }) => {
     const {briefcases, removeProfile, setAddBriefcaseOpen} = useStore();
     const profileBriefcases = briefcases.filter(b => b.profile_id === profile.profile_id);
