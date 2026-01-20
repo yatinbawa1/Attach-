@@ -24,8 +24,8 @@ export interface Task {
     link: string;
     comments: string[];
     comment_unformatted: string;
-    comment_counter: number;
     progress: number;
     social_media: SocialMedia;
     related_brief_cases: BriefCase[];
+    comment_index: number;
 }

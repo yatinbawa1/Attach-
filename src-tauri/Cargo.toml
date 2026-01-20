@@ -21,6 +21,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2.3.2"
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "process"] }
 serde_json = "1"

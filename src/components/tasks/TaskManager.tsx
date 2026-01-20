@@ -83,7 +83,7 @@ export const TaskManager = () => {
 
         try {
             const result = await invoke("start_automation", {
-                tasks: tasks,
+                tasksJson: JSON.stringify(tasks),
             });
             console.log('Automation started:', result);
         } catch (error) {

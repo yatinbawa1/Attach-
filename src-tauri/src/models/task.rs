@@ -1,42 +1,95 @@
-use crate::models::brief_case::{BriefCase, SocialMedia};
-use crate::state::AppState;
 use serde::{Deserialize, Serialize};
-use tauri::{Manager, Runtime};
-use tokio::io::AsyncReadExt;
 use uuid::Uuid;
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+use super::brief_case::BriefCase;
+use super::social_media::SocialMedia;
+
+/// Represents a task that requires comments to be posted on a social media post
+///
+/// A Task consists of a link to a social media post and comments that need to be posted
+/// from different user accounts (BriefCases). When a Task is created, it automatically
+/// finds and assigns all BriefCases that match its social media platform.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
-    pub link: String,
-    pub comments: Vec<String>,
-    comment_unformatted: String,
-    pub comment_counter: usize,
-    pub progress: usize,
+    /// Unique identifier for this task
     pub task_id: Uuid,
+    /// The URL of the social media post where comments should be posted
+    pub link: String,
+    /// The list of comments/messages to be posted (one comment per BriefCase)
+    pub comments: Vec<String>,
+    /// The social media platform this task is for
     pub social_media: SocialMedia,
-    pub related_brief_cases: Option<Vec<BriefCase>>,
+    /// All BriefCases (user accounts) that can post comments for this task
+    pub related_brief_cases: Vec<BriefCase>,
+    /// Current position in the comments array
+    pub comment_index: usize,
 }
 
 impl Task {
-    fn format_comments(input: &str) -> Vec<String> {
+    /// Creates a new Task and assigns relevant BriefCases based on social media platform
+    ///
+    /// This constructor automatically finds all BriefCases that match the specified
+    /// social_media platform and assigns them to the task.
+    ///
+    /// # Arguments
+    /// * `link` - URL of the social media post
+    /// * `comments` - List of comment messages to post (formatted)
+    /// * `social_media` - The platform this task targets
+    /// * `all_brief_cases` - All available BriefCases in the system
+    ///
+    /// # Returns
+    /// A new Task with matching BriefCases assigned
+    pub fn new(
+        link: String,
+        comments: Vec<String>,
+        social_media: SocialMedia,
+        all_brief_cases: &[BriefCase],
+    ) -> Self {
+        // Filter and collect all BriefCases matching this task's social media platform
+        let related_brief_cases: Vec<BriefCase> = all_brief_cases
+            .iter()
+            .filter(|bc| bc.social_media == social_media)
+            .cloned()
+            .collect();
+
+        Self {
+            task_id: Uuid::new_v4(),
+            link,
+            comments,
+            social_media,
+            related_brief_cases,
+            comment_index: 0,
+        }
+    }
+
+    /// Formats raw comment text into a list of clean comments
+    ///
+    /// Handles bullet points, numbered lists, and removes empty lines and whitespace.
+    ///
+    /// # Arguments
+    /// * `input` - Raw multi-line comment text
+    ///
+    /// # Returns
+    /// A vector of formatted, non-empty comment strings
+    pub fn format_comments(input: &str) -> Vec<String> {
         input
             .lines()
-            .map(|line| line.trim()) // 1. Remove surrounding whitespace
-            .filter(|line| !line.is_empty()) // 2. Skip empty lines
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
             .filter_map(|line| {
-                // 3. Remove leading bullets/formatting (*, -, •)
+                // Remove bullet points (*, -, •) from the start
                 let mut cleaned =
                     line.trim_start_matches(|c: char| c == '*' || c == '-' || c == '•');
 
-                // 4. Handle numbered lists (e.g., "1. ", "20) ")
-                // We look for the first character that isn't a digit, dot, or parenthesis
+                // Handle numbered lists (e.g., "1. ", "20) ")
+                // Find first character that isn't a digit, dot, parenthesis, or space
                 if let Some(first_char_index) =
                     cleaned.find(|c: char| !c.is_ascii_digit() && c != '.' && c != ')' && c != ' ')
                 {
                     cleaned = &cleaned[first_char_index..];
                 }
 
-                // 5. Final trim to catch any spaces left behind after removing numbers/stars
+                // Final trim to catch any leftover spaces
                 let final_str = cleaned.trim().to_string();
 
                 if final_str.is_empty() {
@@ -48,27 +101,11 @@ impl Task {
             .collect()
     }
 
-    pub async fn new<R: Runtime, M: Manager<R>>(
-        link: String,
-        comment_unformatted: String,
-        social_media: SocialMedia,
-        app: M,
-    ) -> Self {
-        let brief_cases: Vec<BriefCase> = app.state::<AppState>().brief_cases.read().await.clone();
-        let filtered_brief_cases: Vec<BriefCase> = brief_cases
-            .into_iter()
-            .filter(|bc| bc.social_media == social_media)
-            .collect();
-
-        Self {
-            link,
-            task_id: Uuid::new_v4(),
-            comments: Self::format_comments(&comment_unformatted),
-            comment_unformatted,
-            comment_counter: 0,
-            progress: 0,
-            social_media,
-            related_brief_cases: Some(filtered_brief_cases),
-        }
+    /// Gets the total number of BriefCases assigned to this task
+    ///
+    /// # Returns
+    /// The count of BriefCases that can post comments for this task
+    pub fn briefcase_count(&self) -> usize {
+        self.related_brief_cases.len()
     }
 }

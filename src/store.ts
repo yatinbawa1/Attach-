@@ -22,12 +22,16 @@ interface AppState {
     activeProfileIdForBriefcase: string | null; // Which profile we are adding a briefcase to
     activePlatformForBriefcase: SocialMedia | null; // Which platform triggered the add
 
+    // UI State for Tabs
+    activeTab: 'profiles' | 'tasks';
+
     // Global Error State
     error: string | null;
 
     // Actions
     setAddProfileOpen: (open: boolean) => void;
     setAddBriefcaseOpen: (open: boolean, profileId?: string, platform?: SocialMedia) => void;
+    setActiveTab: (tab: 'profiles' | 'tasks') => void;
     setError: (msg: string | null) => void;
 
     addProfile: (name: string) => void;
@@ -56,6 +60,7 @@ export const useStore = create<AppState>((set, get) => ({
     isAddBriefcaseOpen: false,
     activeProfileIdForBriefcase: null,
     activePlatformForBriefcase: null,
+    activeTab: 'profiles' as 'profiles' | 'tasks',
     error: null,
 
     // Load data from backend on initialization
@@ -109,6 +114,8 @@ export const useStore = create<AppState>((set, get) => ({
             activeProfileIdForBriefcase: profileId || null,
             activePlatformForBriefcase: platform || null
         }),
+
+    setActiveTab: (tab) => set({activeTab: tab}),
 
     setError: (msg) => set({error: msg}),
 
@@ -195,16 +202,17 @@ export const useStore = create<AppState>((set, get) => ({
 
     addTask: (link, comment, platform) => set((state) => {
         const matchingBriefcases = state.briefcases.filter(b => b.social_media === platform);
+        const commentsArray = comment.split('\n').filter(c => c.trim());
         return {
             tasks: [...state.tasks, {
                 task_id: uuidv4(),
                 link,
                 comment_unformatted: comment,
-                comments: [comment],
-                comment_counter: 1,
+                comments: commentsArray,
                 progress: 0,
                 social_media: platform,
-                related_brief_cases: matchingBriefcases
+                related_brief_cases: matchingBriefcases,
+                comment_index: 0
             }]
         };
     }),

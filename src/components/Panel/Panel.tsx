@@ -9,11 +9,13 @@ import {
     HStack,
     ProgressRoot,
     ProgressTrack,
+    Spinner,
     Text,
     VStack
 } from '@chakra-ui/react';
-import {FaArrowLeft} from 'react-icons/fa';
-import {closeWorkspace, getPanelData, nextWorkspaceItem, prevWorkspaceItem,} from '../../api/tauriCommands';
+import {FaArrowRight} from 'react-icons/fa';
+
+import {closeWorkspace, getPanelData, nextWorkspaceItem, copyToClipboard, setCommentIndex} from '../../api/tauriCommands';
 import {BriefCase, Profile, Task} from '@/types';
 
 export const Panel = () => {
@@ -23,19 +25,56 @@ export const Panel = () => {
     const [visitedBriefcases, setVisitedBriefcases] = useState(0);
     const [totalBriefcases, setTotalBriefcases] = useState(0);
     const [isComplete, setIsComplete] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentComment, setCurrentComment] = useState<string | null>(null);
+    const [copiedText, setCopiedText] = useState<string | null>(null);
 
-    // Load data from Tauri state on mount
+    const [taskProgress, setTaskProgress] = useState<[number, number] | null>(null);
+
+    useEffect(() => {
+        if (currentComment && copiedText !== currentComment) {
+            copyToClipboard(currentComment).catch(err => {
+                console.error('Failed to copy comment to clipboard:', err);
+            });
+            setCopiedText(currentComment);
+        }
+    }, [currentComment]);
+
     useEffect(() => {
         const loadData = async () => {
             try {
                 const data = await getPanelData() as any;
                 if (data && typeof data === 'object') {
+                    const previousTaskId = currentTask?.task_id;
+                    const previousProfileId = currentProfile?.profile_id;
+
                     setCurrentTask(data.current_task || null);
                     setCurrentProfile(data.current_profile || null);
                     setBriefcases(data.briefcases || []);
-                    setVisitedBriefcases(data.visited_briefcases || 0);
-                    setTotalBriefcases(data.total_briefcases || 0);
-                    setIsComplete(data.visited_briefcases >= data.total_briefcases && data.total_briefcases > 0);
+                    const overallProgress = data.overall_progress || [0, 0];
+                    setVisitedBriefcases(overallProgress[0] || 0);
+                    setTotalBriefcases(overallProgress[1] || 0);
+                    setIsComplete(overallProgress[0] >= overallProgress[1] && overallProgress[1] > 0);
+
+                    const currentIdx = data.current_task_index;
+                    const taskProgressList = data.task_progress || [];
+                    const currentTaskProgress = currentIdx !== null ? taskProgressList[currentIdx] : null;
+                    setTaskProgress(currentTaskProgress ? [currentTaskProgress[1], currentTaskProgress[2]] : null);
+
+                    const newComment = data.current_comment || null;
+                    setCurrentComment(newComment);
+
+                    const currentTaskId = data.current_task?.task_id;
+                    const currentProfileId = data.current_profile?.profile_id;
+
+                    if (previousTaskId !== currentTaskId || previousProfileId !== currentProfileId) {
+                        setIsLoading(false);
+                    }
+
+                    const newTask = data.current_task;
+                    if (newTask && newComment && newTask.comments[newTask.comment_index] === newComment) {
+                        setCopiedText(newComment);
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load panel data:', error);
@@ -44,36 +83,55 @@ export const Panel = () => {
 
         loadData();
 
-        // Poll for updates every second
         const interval = setInterval(loadData, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [currentTask, currentProfile]);
 
-    // Calculate progress
-    const currentTaskBriefcaseCount = currentTask?.related_brief_cases?.length || 1;
-    const currentTaskBriefcasesVisited = currentTask?.progress || 0;
-    const currentTaskProgress = currentTask ? ((currentTaskBriefcasesVisited) / currentTaskBriefcaseCount) * 100 : 0;
+    const currentTaskBriefcaseCount = taskProgress ? taskProgress[1] : (currentTask?.related_brief_cases?.length || 1);
+    const currentTaskBriefcasesVisited = taskProgress ? taskProgress[0] : 0;
+    const currentTaskBriefcasesDisplay = Math.min(currentTaskBriefcasesVisited + 1, currentTaskBriefcaseCount);
+    const currentTaskProgress = currentTaskBriefcaseCount > 0 ? (currentTaskBriefcasesVisited / currentTaskBriefcaseCount) * 100 : 0;
     const overallProgress = totalBriefcases > 0 ? (visitedBriefcases / totalBriefcases) * 100 : 0;
 
     const handleQuit = useCallback(async () => {
         try {
-            await closeWorkspace(currentProfile?.profile_name);
+            await closeWorkspace();
         } catch (error) {
             console.error('Failed to quit:', error);
         }
     }, []);
 
-    // Keyboard shortcuts
+    const handleNext = useCallback(async () => {
+        setIsLoading(true);
+        const timeout = setTimeout(() => setIsLoading(false), 3000);
+        try {
+            await nextWorkspaceItem();
+        } catch (error) {
+            console.error('Failed to go to next:', error);
+            setIsLoading(false);
+            clearTimeout(timeout);
+        }
+    }, []);
+
+    const handleCommentSelect = useCallback(async (commentIndex: number) => {
+        if (currentTask) {
+            try {
+                await setCommentIndex(currentTask.comment_index, commentIndex);
+            } catch (error) {
+                console.error('Failed to set comment index:', error);
+            }
+        }
+    }, [currentTask]);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowLeft") prevWorkspaceItem().catch(console.error);
-            if (e.key === "ArrowRight") nextWorkspaceItem();
+            if (e.key === "ArrowRight" && !isLoading) handleNext();
             if (e.key === "Escape") handleQuit();
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleQuit]);
+    }, [handleQuit, handleNext, isLoading]);
 
     if (!currentTask) {
         return (
@@ -125,7 +183,7 @@ export const Panel = () => {
                                 <HStack justify="space-between" mb={2}>
                                     <Text fontSize="xs" color="whiteAlpha.700">Current Task</Text>
                                     <Text fontSize="xs" color="whiteAlpha.700">
-                                        {currentTask && currentTask.related_brief_cases ? `${currentTask.progress}/${currentTask.related_brief_cases.length}` : 'No briefcases'}
+                                        {currentTask.related_brief_cases && currentTask.related_brief_cases.length > 0 ? `${currentTaskBriefcasesDisplay}/${currentTaskBriefcaseCount}` : 'No briefcases'}
                                     </Text>
                                 </HStack>
                                 <ProgressRoot value={currentTaskProgress} colorPalette="blue">
@@ -157,21 +215,44 @@ export const Panel = () => {
                 </CardRoot>
 
                 {/* Current Comment */}
-                {currentTask.comments && currentTask.comments.length > 0 && (
+                {currentTask && currentTask.comments.length > 0 && (
                     <CardRoot bg="whiteAlpha.100" backdropFilter="blur(10px)" border="1px solid"
                               borderColor="whiteAlpha.200">
                         <CardBody>
                             <VStack align="start" gap={3}>
-                                <Heading size="sm">Current Comment</Heading>
-                                <Text
-                                    fontSize="sm"
-                                    bg="whiteAlpha.50"
-                                    p={3}
-                                    borderRadius="md"
-                                    w="100%"
-                                >
-                                    {currentTask.comments[currentTask.progress] || 'No comment available'}
-                                </Text>
+                                <HStack justify="space-between">
+                                    <Heading size="sm">Comments</Heading>
+                                    <Text fontSize="xs" color="green.400">
+                                        {copiedText === currentComment ? 'Copied to clipboard' : ''}
+                                    </Text>
+                                </HStack>
+                                <VStack align="start" gap={2} w="100%">
+                                    {currentTask.comments.map((comment, index) => (
+                                        <Box
+                                            key={index}
+                                            p={3}
+                                            borderRadius="md"
+                                            cursor="pointer"
+                                            transition="all 0.2s"
+                                            bg={index === currentTask.comment_index ? "blue.900" : "whiteAlpha.50"}
+                                            border="1px solid"
+                                            borderColor={index === currentTask.comment_index ? "blue.500" : "transparent"}
+                                            _hover={{
+                                                bg: index === currentTask.comment_index ? "blue.800" : "whiteAlpha.100",
+                                                borderColor: index === currentTask.comment_index ? "blue.400" : "blue.500"
+                                            }}
+                                            onClick={() => handleCommentSelect(index)}
+                                            w="100%"
+                                        >
+                                            <Text
+                                                fontSize="sm"
+                                                color={index === currentTask.comment_index ? "white" : "whiteAlpha.900"}
+                                            >
+                                                {index + 1}. {comment}
+                                            </Text>
+                                        </Box>
+                                    ))}
+                                </VStack>
                             </VStack>
                         </CardBody>
                     </CardRoot>
@@ -182,26 +263,32 @@ export const Panel = () => {
                           borderColor="whiteAlpha.200">
                     <CardBody>
                         <VStack gap={3}>
-                            {/* Navigation */}
-                            <HStack w="100%" gap={3}>
-                                <Button
-                                    flex={1}
-                                    variant="ghost"
-                                    onClick={() => prevWorkspaceItem().catch(console.error)}
-                                >
-                                    <FaArrowLeft style={{marginRight: '8px'}}/>
-                                    Previous
-                                </Button>
-                                <Button
-                                    flex={1}
-                                    variant="ghost"
-                                    onClick={() => {
-                                        nextWorkspaceItem().catch(console.error);
-                                    }}
-                                >
-                                    Next
-                                </Button>
-                            </HStack>
+                                {/* Navigation */}
+                                <HStack w="100%" gap={3}>
+                                    {/* Previous button disabled - backend functionality not implemented */}
+                                    {/* <Button
+                                        flex={1}
+                                        variant="ghost"
+                                        onClick={() => prevWorkspaceItem().catch(console.error)}
+                                    >
+                                        <FaArrowLeft style={{marginRight: '8px'}}/>
+                                        Previous
+                                    </Button> */}
+                                    <Button
+                                        flex={1}
+                                        variant="ghost"
+                                        onClick={handleNext}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <Spinner size="sm" />
+                                        ) : (
+                                            <>
+                                                Next <FaArrowRight style={{marginLeft: '8px'}}/>
+                                            </>
+                                        )}
+                                    </Button>
+                                </HStack>
 
                             {/* Quit */}
                             <Button

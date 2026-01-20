@@ -11,7 +11,7 @@ import {
     VStack
 } from '@chakra-ui/react';
 import { FaArrowLeft } from 'react-icons/fa';
-import { tourInvokeGetLatestScreenshot, goToNextBriefcase } from '../../api/tauriCommands';
+import { nextWorkspaceItem } from '../../api/tauriCommands';
 
 interface ScreenshotInfo {
     id: string;
@@ -39,11 +39,13 @@ export const ScreenshotBay = () => {
     useEffect(() => {
         const fetchLatestScreenshot = async () => {
             try {
-                const data = await tourInvokeGetLatestScreenshot();
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    setScreenshot(parsed);
-                }
+                // Backend command 'tour_get_latest_screenshot' not implemented yet
+                // const data = await tourInvokeGetLatestScreenshot();
+                // if (data) {
+                //     const parsed = JSON.parse(data);
+                //     setScreenshot(parsed);
+                // }
+                console.warn('tour_get_latest_screenshot command not implemented in backend');
             } catch (error) {
                 console.error('Failed to fetch screenshot:', error);
             }
@@ -131,7 +133,7 @@ export const ScreenshotBay = () => {
 
     const handleFinalize = async () => {
         try {
-            await goToNextBriefcase();
+            await nextWorkspaceItem();
         } catch (error) {
             console.error('Failed to go to next briefcase:', error);
         }
@@ -139,12 +141,14 @@ export const ScreenshotBay = () => {
 
     const handleGetLatest = async () => {
         try {
-            const data = await tourInvokeGetLatestScreenshot();
-            if (data) {
-                const parsed = JSON.parse(data);
-                setScreenshot(parsed);
-                setAnnotationCount(0);
-            }
+            // Backend command 'tour_get_latest_screenshot' not implemented yet
+            // const data = await tourInvokeGetLatestScreenshot();
+            // if (data) {
+            //     const parsed = JSON.parse(data);
+            //     setScreenshot(parsed);
+            //     setAnnotationCount(0);
+            // }
+            console.warn('tour_get_latest_screenshot command not implemented in backend');
         } catch (error) {
             console.error('Failed to get latest screenshot:', error);
         }

@@ -13,7 +13,7 @@ export const MetricsHeader = () => {
 
         // Logic: Find first profile WITHOUT this briefcase
         profiles.some((p, index) => {
-            const hasPlatform = briefcases.some(b => b.profile_id === p.profile_id && b.platform === platform);
+            const hasPlatform = briefcases.some(b => b.profile_id === p.profile_id && b.social_media === platform);
             if (!hasPlatform) {
                 targetProfileIndex = index;
                 targetProfileId = p.profile_id;

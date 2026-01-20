@@ -1,5 +1,6 @@
 import {invoke} from '@tauri-apps/api/core';
-import {BriefCase, Profile, Task} from '../types';
+import {writeText} from '@tauri-apps/plugin-clipboard-manager';
+import {BriefCase, Profile} from '../types';
 
 
 export interface ScreenshotInfo {
@@ -22,14 +23,12 @@ export interface Annotation {
 export const createProfile = (name: string): Promise<Profile> =>
     invoke('create_profile', {profileName: name});
 
-export const getPanelData = (): Promise<[Task | null, Profile | null, BriefCase[], number, number]> =>
+export const getPanelData = (): Promise<any> =>
     invoke('get_panel_data');
 
 
-export const closeWorkspace = (profileName: string | undefined): Promise<void> => {
-    const args = profileName ? { profileName } : {};
-    return invoke('close_workspace', args);
-};
+export const closeWorkspace = (): Promise<void> =>
+    invoke('close_workspace', {});
 
 export const loadProfiles = (): Promise<Profile[]> =>
     invoke('load_profiles');
@@ -48,24 +47,45 @@ export const saveAllData = (profiles: Profile[], briefcases: BriefCase[]): Promi
     invoke('save_all_data', {profiles, briefcases});
 
 
-export const prevWorkspaceItem = (): Promise<void> =>
-    invoke('prev_task_execution');
+// export const prevWorkspaceItem = (): Promise<void> =>
+//     invoke('prev_task_execution');
 
 export const changeWebviewUrl = (url: string): Promise<void> =>
-    invoke('change_webview_url', { url });
+    invoke('change_webview_url', {url});
 
 export const nextWorkspaceItem = (): Promise<void> =>
-    invoke('next_task_execution');
+    invoke('next_execution');
 
-export const addNewItem = (
-    itemType: string,
-    payload: any
-): Promise<void> =>
-    invoke('add_item_persist', {itemType, payload});
+export const setCommentIndex = (taskIndex: number, commentIndex: number): Promise<void> =>
+    invoke('set_comment_index', {task_index: taskIndex, comment_index: commentIndex});
+
+export const copyToClipboard = async (text: string): Promise<void> => {
+    await writeText(text);
+};
+
+export enum WindowSize {
+    Partial = "Partial",
+    Full = "Full"
+}
+
+export const openLoginWindow = async (profile: Profile, url: String): Promise<void> => {
+    await invoke('create_window_sized', {
+        profile: profile,
+        url: url,
+        closePreviousWindow: false,
+        sizeType: WindowSize.Full,
+    });
+}
 
 
-export const tourInvokeGetLatestScreenshot = (): Promise<string | null> =>
-    invoke('tour_get_latest_screenshot');
+// export const addNewItem = (
+//     itemType: string,
+//     payload: any
+// ): Promise<void> =>
+//     invoke('add_item_persist', {itemType, payload});
 
-export const goToNextBriefcase = (): Promise<void> =>
-    invoke('go_to_next_briefcase');
+// export const tourInvokeGetLatestScreenshot = (): Promise<string | null> =>
+//     invoke('tour_get_latest_screenshot');
+
+// export const goToNextBriefcase = (): Promise<void> =>
+//     invoke('go_to_next_briefcase');
