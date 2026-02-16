@@ -1,6 +1,7 @@
 use crate::models::{BriefCase, Profile, SocialMedia, Task};
 use crate::state::AppState;
 use crate::storage::Storage;
+use crate::webview::PlatformWebview;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use uuid::Uuid;
@@ -185,7 +186,7 @@ pub async fn save_all_data(
 }
 
 /// ==================== Window Management Commands ====================
-/// Launches a profile window with the specified URL
+/// Launches a profile window with the specified URL using Tauri webview
 
 #[tauri::command]
 pub async fn create_window_sized(
@@ -220,11 +221,16 @@ pub async fn create_window_sized(
     let screen_width = monitor.size().width as f64 / monitor.scale_factor();
     let screen_height = monitor.size().height as f64 / monitor.scale_factor();
 
-    // Profile window takes up 2/3 of the screen
-    let webview_width = (screen_width * 0.66).floor();
-    let webview_height = screen_height;
-    let x = 0.0;
-    let y = 0.0;
+    let (webview_width, webview_height, x, y) = match size_type {
+        WindowSize::Full => (screen_width, screen_height, 0.0, 0.0),
+        WindowSize::Partial => {
+            let webview_width = (screen_width * 0.66).floor();
+            let webview_height = screen_height;
+            let x = 0.0;
+            let y = 0.0;
+            (webview_width, webview_height, x, y)
+        }
+    };
 
     let webview =
         WebviewWindowBuilder::new(&app_handle, &window_label, WebviewUrl::App(url.into()))
@@ -254,6 +260,95 @@ pub async fn create_window_sized(
                 .map_err(|e| format!("Failed to build window: {}", e))?;
         }
     }
+
+    Ok(window_label)
+}
+
+/// Launches a profile window with platform-specific webviews (macOS WKWebView, Windows WebView2)
+#[tauri::command]
+pub async fn create_window_sized_local(
+    app_handle: AppHandle,
+    profile: Profile,
+    url: &str,
+    size_type: WindowSize,
+    close_previous_window: bool,
+) -> Result<String, String> {
+    let data_dir = profile
+        .get_data_path(&app_handle)
+        .ok_or("Failed to get profile data path")?;
+
+    let window_label = format!("profile-{}", profile.profile_id);
+
+    if close_previous_window {
+        // Close all profile windows first
+        for (_, window) in app_handle.webview_windows() {
+            let label = window.label();
+            if label.starts_with("profile-") {
+                let _ = window.close();
+            }
+        }
+    }
+
+    // Get monitor dimensions for window sizing
+    let monitor = app_handle
+        .primary_monitor()
+        .map_err(|e| format!("Failed to get monitor: {}", e))?
+        .ok_or("No monitor available")?;
+
+    let screen_width = monitor.size().width as f64 / monitor.scale_factor();
+    let screen_height = monitor.size().height as f64 / monitor.scale_factor();
+
+    let (webview_width, webview_height, x, y) = match size_type {
+        WindowSize::Full => (screen_width, screen_height, 0.0, 0.0),
+        WindowSize::Partial => {
+            let webview_width = (screen_width * 0.66).floor();
+            let webview_height = screen_height;
+            let x = 0.0;
+            let y = 0.0;
+            (webview_width, webview_height, x, y)
+        }
+    };
+
+    let title = format!("Browser - {}", profile.profile_name);
+
+    #[cfg(target_os = "macos")]
+    let _webview = PlatformWebview::with_macos_options(
+        &app_handle,
+        &window_label,
+        &title,
+        url,
+        webview_width,
+        webview_height,
+        x,
+        y,
+        data_dir,
+    ).map_err(|e| format!("Failed to create platform webview: {}", e))?;
+
+    #[cfg(target_os = "windows")]
+    let _webview = PlatformWebview::with_windows_options(
+        &app_handle,
+        &window_label,
+        &title,
+        url,
+        webview_width,
+        webview_height,
+        x,
+        y,
+        data_dir,
+    ).map_err(|e| format!("Failed to create platform webview: {}", e))?;
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let _webview = PlatformWebview::with_platform_options(
+        &app_handle,
+        &window_label,
+        &title,
+        url,
+        webview_width,
+        webview_height,
+        x,
+        y,
+        data_dir,
+    ).map_err(|e| format!("Failed to create platform webview: {}", e))?;
 
     Ok(window_label)
 }

@@ -29,6 +29,7 @@ mod execution;
 mod models;
 mod state;
 mod storage;
+mod webview;
 
 /// Initializes and runs the Tauri application
 ///
@@ -81,6 +82,7 @@ pub fn run() {
             change_webview_url,
             close_workspace,
             create_window_sized,
+            create_window_sized_local,
             // Automation
             start_automation,
             execute_next_step,
